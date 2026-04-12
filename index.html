@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stavba atomu – hra</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f0f4f8;
+}
+
+.container {
+    max-width: 500px;
+    width: 95%;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.atom {
+    font-size: 40px;
+    margin: 20px 0;
+}
+
+.atom sup { font-size: 18px; }
+.atom sub { font-size: 18px; }
+
+.question {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+#scoreLive {
+    font-size: 16px;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.answers button {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 10px;
+    background: #ddd;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.answers button:hover {
+    background: #ccc;
+}
+
+.correct {
+    background: #4CAF50 !important;
+    color: white;
+}
+
+.wrong {
+    background: #f44336 !important;
+    color: white;
+}
+
+#nextBtn, #restartBtn {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #2196F3;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: none;
+}
+
+#result {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div id="game">
+        <div id="scoreLive">Skóre: 0</div>
+
+        <div class="atom" id="atom"></div>
+        <div class="question" id="question"></div>
+        <div class="answers" id="answers"></div>
+
+        <button id="nextBtn">Další</button>
+    </div>
+
+    <div id="result">
+        <h2>Výsledek</h2>
+        <p id="score"></p>
+        <button id="restartBtn">Zkus znovu</button>
+    </div>
+</div>
+
+<script>
+
+// ===== DATA (ZACHOVÁNO KOMPLETNĚ) =====
+const series = [
+    [
+        {atom:"<sup>12</sup><sub>6</sub>C", q:"Kolik má protonů?", a:[6,12,18], correct:0},
+        {atom:"<sup>16</sup><sub>8</sub>O", q:"Kolik má elektronů?", a:[8,16,24], correct:0},
+        {atom:"<sup>23</sup><sub>11</sub>Na", q:"Kolik má neutronů?", a:[12,11,23], correct:0},
+        {atom:"<sup>14</sup><sub>7</sub>N", q:"Kolik má nukleonů?", a:[14,7,21], correct:0},
+        {atom:"<sup>40</sup><sub>20</sub>Ca", q:"Kolik má protonů?", a:[20,40,60], correct:0},
+        {atom:"<sup>35</sup><sub>17</sub>Cl", q:"Kolik má neutronů?", a:[18,17,35], correct:0},
+        {atom:"<sup>1</sup><sub>1</sub>H", q:"Kolik má elektronů?", a:[1,0,2], correct:0},
+        {atom:"<sup>56</sup><sub>26</sub>Fe", q:"Kolik má protonů?", a:[26,56,30], correct:0},
+        {atom:"<sup>19</sup><sub>9</sub>F", q:"Kolik má neutronů?", a:[10,9,19], correct:0},
+        {atom:"<sup>24</sup><sub>12</sub>Mg", q:"Kolik má nukleonů?", a:[24,12,36], correct:0}
+    ],
+    [
+        {atom:"<sup>27</sup><sub>13</sub>Al", q:"Kolik má protonů?", a:[13,27,14], correct:0},
+        {atom:"<sup>31</sup><sub>15</sub>P", q:"Kolik má neutronů?", a:[16,15,31], correct:0},
+        {atom:"<sup>7</sup><sub>3</sub>Li", q:"Kolik má elektronů?", a:[3,7,4], correct:0},
+        {atom:"<sup>20</sup><sub>10</sub>Ne", q:"Kolik má nukleonů?", a:[20,10,30], correct:0},
+        {atom:"<sup>39</sup><sub>19</sub>K", q:"Kolik má protonů?", a:[19,39,20], correct:0},
+        {atom:"<sup>32</sup><sub>16</sub>S", q:"Kolik má neutronů?", a:[16,32,48], correct:0},
+        {atom:"<sup>9</sup><sub>4</sub>Be", q:"Kolik má elektronů?", a:[4,9,5], correct:0},
+        {atom:"<sup>28</sup><sub>14</sub>Si", q:"Kolik má nukleonů?", a:[28,14,42], correct:0},
+        {atom:"<sup>52</sup><sub>24</sub>Cr", q:"Kolik má protonů?", a:[24,52,28], correct:0},
+        {atom:"<sup>63</sup><sub>29</sub>Cu", q:"Kolik má neutronů?", a:[34,29,63], correct:0}
+    ]
+];
+
+// ===== LOGIKA =====
+let currentSeries = [];
+let currentIndex = 0;
+let score = 0;
+
+function updateScore() {
+    document.getElementById("scoreLive").innerText =
+        `Skóre: ${score} / ${currentIndex}`;
+}
+
+function startGame() {
+    currentSeries = series[Math.floor(Math.random() * series.length)];
+    currentIndex = 0;
+    score = 0;
+
+    document.getElementById("result").style.display = "none";
+    document.getElementById("game").style.display = "block";
+
+    updateScore();
+    loadQuestion();
+}
+
+function loadQuestion() {
+    const q = currentSeries[currentIndex];
+
+    document.getElementById("atom").innerHTML = q.atom;
+    document.getElementById("question").innerText = q.q;
+
+    const answersDiv = document.getElementById("answers");
+    answersDiv.innerHTML = "";
+
+    let answers = q.a.map((text, i) => ({
+        text: text,
+        correct: i === q.correct
+    }));
+
+    for (let i = answers.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [answers[i], answers[j]] = [answers[j], answers[i]];
+    }
+
+    answers.forEach(ans => {
+        const btn = document.createElement("button");
+        btn.innerText = ans.text;
+        btn.dataset.correct = ans.correct;
+
+        btn.onclick = () => checkAnswer(btn);
+
+        answersDiv.appendChild(btn);
+    });
+
+    document.getElementById("nextBtn").style.display = "none";
+}
+
+function checkAnswer(btn) {
+    const buttons = document.querySelectorAll(".answers button");
+    buttons.forEach(b => b.disabled = true);
+
+    if (btn.dataset.correct === "true") {
+        btn.classList.add("correct");
+        score++;
+    } else {
+        btn.classList.add("wrong");
+        buttons.forEach(b => {
+            if (b.dataset.correct === "true") {
+                b.classList.add("correct");
+            }
+        });
+    }
+
+    currentIndex++;
+    updateScore();
+
+    document.getElementById("nextBtn").style.display = "inline-block";
+}
+
+document.getElementById("nextBtn").onclick = () => {
+    if (currentIndex < currentSeries.length) {
+        loadQuestion();
+    } else {
+        endGame();
+    }
+};
+
+function endGame() {
+    document.getElementById("game").style.display = "none";
+    document.getElementById("result").style.display = "block";
+
+    document.getElementById("score").innerText =
+        `${score} / ${currentSeries.length}`;
+}
+
+document.getElementById("restartBtn").onclick = startGame;
+
+startGame();
+
+</script>
+
+</body>
+</html>
